@@ -40,7 +40,8 @@ public class DriverOCDebugVGACard extends DriverItem {
 
 		boolean bounded = false;
 		String bindAddr;
-		TextBuffer screen;
+		TextBuffer screen = null;
+		String testAddr = "";
 
 		public Environment(TileEntity container) {
 			this.container = container;
@@ -51,20 +52,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 		public void load(NBTTagCompound nbt) {
 			super.load(nbt);
 			if (nbt.hasKey("screen")) {
-				/*
-				// This has issues.
-				String address = nbt.getString("screen");
-				
-				Node testNode = this.node().network().node(address);
-				if (testNode != null && testNode.canBeReachedFrom(node())) {
-					li.cil.oc.api.network.Environment host = testNode.host();
-					if (host instanceof TextBuffer) {
-						bounded = true;
-						bindAddr = address;
-						screen = (TextBuffer)host;
-					}
-				}
-				*/
+				testAddr = nbt.getString("screen");
 			}
 		}
 
@@ -74,7 +62,31 @@ public class DriverOCDebugVGACard extends DriverItem {
 			if (bounded)
 				nbt.setString("screen", bindAddr);
 		}
+		
+		private TextBuffer screen() {
+			if (screen != null)
+				return screen;
+			if (testAddr.equals("") || node().network() == null)
+				return null;
+			
+			Node testNode = this.node().network().node(testAddr);
+			if (testNode == null || !testNode.canBeReachedFrom(node())) {
+				testAddr = "";
+				return null;
+			}
+			li.cil.oc.api.network.Environment host = testNode.host();
+			if (!(host instanceof TextBuffer)) {
+				testAddr = "";
+				return null;
+			}
 
+			bounded = true;
+			bindAddr = testAddr;
+			screen = (TextBuffer) host;
+
+			return screen;
+		}
+		
 		@Callback(direct = true, doc = "function(address:string):boolean -- Binds the GPU to the screen with the specified address.")
 		public Object[] bind(Context context, Arguments args) {
 			String address = args.checkString(0);
@@ -96,7 +108,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 
 		@Callback(direct = true, doc = "function():number, boolean -- Get the current foreground color and whether it's from the palette or not.")
 		public Object[] getForeground(Context context, Arguments args) {
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			return new Object[] { screen.getForegroundColor(), screen.isForegroundFromPalette() };
@@ -107,7 +119,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 			int value = args.checkInteger(0);
 			boolean palette = args.optBoolean(1, false);
 
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			int oldrgb;
@@ -127,7 +139,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 
 		@Callback(direct = true, doc = "function():number, boolean -- Get the current background color and whether it's from the palette or not.")
 		public Object[] getBackground(Context context, Arguments args) {
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			return new Object[] { screen.getBackgroundColor(), screen.isBackgroundFromPalette() };
@@ -138,7 +150,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 			int value = args.checkInteger(0);
 			boolean palette = args.optBoolean(1, false);
 
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			int oldrgb;
@@ -158,7 +170,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 
 		@Callback(direct = true, doc = "function():number -- Returns the currently set color depth.")
 		public Object[] getDepth(Context context, Arguments args) {
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			return new Object[] { depths[screen.getColorDepth().ordinal()] };
@@ -168,7 +180,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 		public Object[] setDepth(Context context, Arguments args) throws Exception {
 			int depth = args.checkInteger(0);
 
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			int olddepth = depths[screen.getColorDepth().ordinal()];
@@ -192,7 +204,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 
 		@Callback(direct = true, doc = "function():number -- Get the maximum supported color depth.")
 		public Object[] maxDepth(Context context, Arguments args) {
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			return new Object[] { depths[screen.getMaximumColorDepth().ordinal()] };
@@ -202,7 +214,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 		public Object[] setMaxDepth(Context context, Arguments args) throws Exception {
 			int depth = args.checkInteger(0);
 
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			int olddepth = depths[screen.getMaximumColorDepth().ordinal()];
@@ -232,7 +244,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 			int height = args.checkInteger(3);
 			String character = args.checkString(4);
 
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			if (character.length() != 1)
@@ -245,7 +257,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 
 		@Callback(direct = true, doc = "function():string -- Get the address of the screen the GPU is currently bound to.")
 		public Object[] getScreen(Context context, Arguments args) {
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			return new Object[] { bindAddr };
@@ -253,7 +265,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 
 		@Callback(direct = true, doc = "function():number, number -- Get the current screen resolution.")
 		public Object[] getResolution(Context context, Arguments args) {
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			return new Object[] { screen.getWidth(), screen.getHeight() };
@@ -264,7 +276,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 			int width = args.checkInteger(0);
 			int height = args.checkInteger(1);
 
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			int curwidth = screen.getWidth();
@@ -285,7 +297,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 
 		@Callback(direct = true, doc = "function():number, number -- Get the maximum screen resolution.")
 		public Object[] maxResolution(Context context, Arguments args) {
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			return new Object[] { screen.getMaximumWidth(), screen.getMaximumHeight() };
@@ -296,7 +308,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 			int width = args.checkInteger(0);
 			int height = args.checkInteger(1);
 
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			int maxwidth = screen.getMaximumWidth();
@@ -311,7 +323,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 		public Object[] getPaletteColor(Context context, Arguments args) {
 			int index = args.checkInteger(0);
 
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			return new Object[] { screen.getPaletteColor(index) };
@@ -322,7 +334,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 			int index = args.checkInteger(0);
 			int color = args.checkInteger(1);
 
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			int oldcolor = screen.getPaletteColor(index);
@@ -337,7 +349,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 			int x = args.checkInteger(0) - 1;
 			int y = args.checkInteger(1) - 1;
 
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			boolean fgpal = screen.isForegroundFromPalette(x, y);
@@ -353,7 +365,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 			String value = args.checkString(2);
 			boolean vertical = args.optBoolean(3, false);
 
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			screen.set(x, y, value, vertical);
@@ -370,7 +382,7 @@ public class DriverOCDebugVGACard extends DriverItem {
 			int tx = args.checkInteger(4);
 			int ty = args.checkInteger(5);
 
-			if (!bounded)
+			if (screen() == null)
 				return new Object[] { null, "no screen" };
 
 			screen.copy(x, y, width, height, tx, ty);
