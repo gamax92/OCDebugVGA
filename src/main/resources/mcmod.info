@@ -1,0 +1,15 @@
+[
+{
+  "modid": "ocdebugvga",
+  "name": "OCDebugVGA",
+  "description": "You can do even more things to the screens, with riduculus speed!",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authors": ["gamax92"],
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
