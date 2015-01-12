@@ -210,6 +210,33 @@ public class DriverOCDebugVGACard extends DriverItem
 		}
 		
 		@Callback(direct=true)
+		public Object[] setMaxDepth(Context context, Arguments args) throws Exception
+		{
+			int depth = args.checkInteger(0);
+			
+			if (!bounded)
+				return new Object[]{null, "no screen"};
+			
+			int olddepth = depths[screen.getMaximumColorDepth().ordinal()];
+			
+			switch (depth) {
+			case 1:
+				screen.setMaximumColorDepth(ColorDepth.OneBit);
+				break;
+			case 4:
+				screen.setMaximumColorDepth(ColorDepth.FourBit);
+				break;
+			case 8:
+				screen.setMaximumColorDepth(ColorDepth.EightBit);
+				break;
+			default:
+				throw new Exception("unsupported depth");
+			}
+			
+			return new Object[]{olddepth};
+		}
+		
+		@Callback(direct=true)
 		public Object[] fill(Context context, Arguments args)
 		{
 			int x = args.checkInteger(0)-1;
@@ -279,6 +306,23 @@ public class DriverOCDebugVGACard extends DriverItem
 				return new Object[]{null, "no screen"};
 			
 			return new Object[]{screen.getMaximumWidth(), screen.getMaximumHeight()};
+		}
+		
+		@Callback(direct=true)
+		public Object[] setMaxResolution(Context context, Arguments args)
+		{
+			int width = args.checkInteger(0);
+			int height = args.checkInteger(1);
+			
+			if (!bounded)
+				return new Object[]{null, "no screen"};
+			
+			int maxwidth = screen.getMaximumWidth();
+			int maxheight = screen.getMaximumHeight();
+			
+			screen.setMaximumResolution(width, height);
+			
+			return new Object[]{maxwidth, maxheight};
 		}
 		
 		@Callback(direct=true)
